@@ -1,4 +1,10 @@
+
+
+# ZODIAC - Zero-touch Operation, Deployment, and Intelligent Analytics for Cisco
+
 # Cisco IOS XE CSR1000v Ansible Automation and Monitoring
+
+Intended for Network Systems Programming Group Project.
 
 This project provisions three Cisco IOS XE CSR1000v routers and deploys a Docker Compose monitoring stack with SNMP Exporter, Prometheus, and Grafana.
 
