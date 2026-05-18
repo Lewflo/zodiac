@@ -1,0 +1,6 @@
+.ansible/
+.venv/
+.venv-libssh/
+__pycache__/
+*.pyc
+backups/*.cfg

@@ -1,0 +1,13 @@
+---
+- name: Backup Cisco IOS XE running configuration
+  hosts: ios_routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+
+  tasks:
+    - name: Backup running-config
+      cisco.ios.ios_config:
+        backup: true
+        backup_options:
+          dir_path: "{{ playbook_dir }}/../backups"
+          filename: "{{ inventory_hostname }}.cfg"

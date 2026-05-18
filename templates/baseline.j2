@@ -1,0 +1,27 @@
+hostname {{ baseline_hostname }}
+no ip domain lookup
+ip domain name {{ baseline_domain_name }}
+
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+
+banner motd ^CUnauthorized access is prohibited. Managed by Ansible.^C
+
+ip ssh version 2
+ip ssh time-out 60
+
+snmp-server community {{ baseline_snmp_community }} RO
+snmp-server location {{ baseline_snmp_location_prefix }} {{ baseline_site_name }}
+snmp-server contact {{ baseline_snmp_contact }}
+
+logging host {{ baseline_logging_host }}
+
+ntp server {{ baseline_ntp_server }}
+
+ip route 0.0.0.0 0.0.0.0 {{ baseline_management_gateway }}
+
+line vty 0 4
+ privilege level 15
+ login local
+ transport input ssh

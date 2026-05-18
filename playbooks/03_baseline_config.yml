@@ -1,0 +1,100 @@
+---
+- name: Render baseline configuration files
+  hosts: ios_routers
+  gather_facts: false
+  connection: local
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/ios_routers.yml"
+
+  tasks:
+    - name: Load this router host variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}.yml"
+
+    - name: Ensure rendered config directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../.ansible/rendered"
+        state: directory
+        mode: "0700"
+      run_once: true
+
+    - name: Render baseline config for this router
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/baseline.j2"
+        dest: "{{ playbook_dir }}/../.ansible/rendered/{{ inventory_hostname }}-baseline.cfg"
+        mode: "0600"
+      vars:
+        baseline_hostname: "{{ inventory_hostname }}"
+        baseline_domain_name: "{{ domain_name }}"
+        baseline_snmp_community: "{{ snmp_community }}"
+        baseline_snmp_location_prefix: "{{ snmp_location_prefix }}"
+        baseline_site_name: "{{ site_name }}"
+        baseline_snmp_contact: "{{ snmp_contact }}"
+        baseline_logging_host: "{{ logging_host }}"
+        baseline_ntp_server: "{{ ntp_server }}"
+        baseline_management_gateway: "{{ management_gateway }}"
+
+- name: Apply baseline configuration to Cisco IOS XE routers
+  hosts: ios_routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/ios_routers.yml"
+
+  tasks:
+    - name: Configure local automation user
+      cisco.ios.ios_user:
+        name: "{{ local_username }}"
+        privilege: 15
+        configured_password: "{{ local_user_secret }}"
+        password_type: secret
+        update_password: on_create
+        state: present
+      no_log: true
+
+    - name: Check whether enable secret exists
+      cisco.ios.ios_command:
+        commands:
+          - show running-config | include ^enable secret
+      register: enable_secret_check
+
+    - name: Configure enable secret when missing
+      cisco.ios.ios_config:
+        lines:
+          - enable secret {{ enable_secret }}
+      when: enable_secret_check.stdout[0] | trim == ""
+      no_log: true
+
+    - name: Configure global baseline lines
+      cisco.ios.ios_config:
+        lines:
+          - hostname {{ inventory_hostname }}
+          - no ip domain lookup
+          - ip domain name {{ domain_name }}
+          - service timestamps debug datetime msec
+          - service timestamps log datetime msec
+          - service password-encryption
+          - ip ssh version 2
+          - ip ssh time-out 60
+          - snmp-server community {{ snmp_community }} RO
+          - snmp-server location {{ snmp_location_prefix }} {{ site_name }}
+          - snmp-server contact {{ snmp_contact }}
+          - logging host {{ logging_host }}
+          - ntp server {{ ntp_server }}
+          - ip route 0.0.0.0 0.0.0.0 {{ management_gateway }}
+        save_when: never
+
+    - name: Configure MOTD banner
+      cisco.ios.ios_banner:
+        banner: motd
+        text: Unauthorized access is prohibited. Managed by Ansible.
+        state: present
+
+    - name: Configure VTY SSH access
+      cisco.ios.ios_config:
+        parents: line vty 0 4
+        lines:
+          - privilege level 15
+          - login local
+          - transport input ssh
+        save_when: never

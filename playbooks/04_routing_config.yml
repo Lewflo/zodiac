@@ -1,0 +1,27 @@
+---
+- name: Configure loopback and OSPF on Cisco IOS XE routers
+  hosts: ios_routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/ios_routers.yml"
+
+  tasks:
+    - name: Load this router host variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}.yml"
+
+    - name: Configure Loopback0
+      cisco.ios.ios_config:
+        parents: interface Loopback0
+        lines:
+          - description ROUTER_ID_LOOPBACK
+          - ip address {{ loopback0_ip }} {{ loopback0_mask }}
+
+    - name: Configure OSPF process
+      cisco.ios.ios_config:
+        parents: router ospf {{ ospf_process_id }}
+        lines:
+          - router-id {{ router_id }}
+          - network {{ loopback0_ip }} 0.0.0.0 area {{ ospf_area }}
+        save_when: "{{ 'modified' if save_config | default(true) | bool else 'never' }}"

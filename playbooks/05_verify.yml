@@ -1,0 +1,25 @@
+---
+- name: Verify Cisco IOS XE configuration
+  hosts: ios_routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/ios_routers.yml"
+
+  tasks:
+    - name: Load this router host variables
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}.yml"
+
+    - name: Run verification commands
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+          - show running-config | include ^hostname|snmp-server|ntp server|logging host|ip ssh
+          - show ip ospf neighbor
+          - show running-config interface Loopback0
+      register: verify_output
+
+    - name: Display verification output
+      ansible.builtin.debug:
+        var: verify_output.stdout_lines

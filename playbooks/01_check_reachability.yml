@@ -1,0 +1,17 @@
+---
+- name: Check Cisco IOS XE reachability
+  hosts: ios_routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+
+  tasks:
+    - name: Run show version
+      cisco.ios.ios_command:
+        commands:
+          - show run | include hostname|ip add
+      register: version_output
+
+    - name: Display IOS XE version output
+      ansible.builtin.debug:
+        var: version_output.stdout_lines
+

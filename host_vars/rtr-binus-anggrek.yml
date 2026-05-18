@@ -1,0 +1,7 @@
+---
+site_name: BINUS_ANGGREK
+router_id: 1.1.1.1
+management_ip: 192.168.10.10
+management_mask: 255.255.255.0
+loopback0_ip: 10.10.10.1
+loopback0_mask: 255.255.255.255

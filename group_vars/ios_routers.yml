@@ -1,0 +1,26 @@
+---
+ansible_connection: network_cli
+ansible_network_os: cisco.ios.ios
+ansible_user: user
+ansible_password: "P@ssw0rd"
+ansible_become: true
+ansible_become_method: enable
+ansible_become_password: "P@ssw0rd"
+
+domain_name: binus.local
+local_username: user
+local_user_secret: "P@ssw0rd"
+enable_secret: "P@ssw0rd"
+
+management_interface: GigabitEthernet1
+management_gateway: 192.168.10.1
+
+ntp_server: 192.168.10.1
+snmp_community: BINUSRO
+snmp_location_prefix: BINUS
+snmp_contact: network-automation@binus.local
+logging_host: 192.168.10.100
+
+ospf_process_id: 10
+ospf_area: 0
+save_config: true
