@@ -11,9 +11,14 @@ This project provisions three Cisco IOS XE CSR1000v routers and deploys a Docker
 ## Project Tree
 
 ```text
-ztp-cisco-telemetry/
+zodiac/
 ├── README.md
 ├── Makefile
+├── cmd/
+│   └── alert-receiver/
+│       └── main.go
+├── go.mod
+├── go.sum
 ├── ansible.cfg
 ├── backups/
 ├── group_vars/
@@ -68,7 +73,7 @@ ztp-cisco-telemetry/
 Run this once on `srv-binus` from the project root:
 
 ```bash
-cd ~/ztp-cisco-telemetry
+cd ~/zodiac
 bash scripts/setup-control-node.sh
 ```
 
@@ -124,7 +129,7 @@ The CSR1000v routers must already have management IP, SSH, enable password, and 
 Run all commands from the project root:
 
 ```bash
-cd ~/ztp-cisco-telemetry
+cd ~/zodiac
 ```
 
 Validate inventory:
@@ -176,7 +181,7 @@ ansible-playbook playbooks/06_save_config.yml
 Start monitoring:
 
 ```bash
-cd ~/ztp-cisco-telemetry
+cd ~/zodiac
 make monitoring-up
 make monitoring-verify
 ```
@@ -327,8 +332,50 @@ curl "http://localhost:9116/snmp?target=192.168.10.10&module=if_mib&auth=public_
 If Grafana has no dashboard, restart the stack so provisioning runs again:
 
 ```bash
-cd ~/ztp-cisco-telemetry/monitoring
+cd ~/zodiac/monitoring
 docker compose restart grafana
 ```
 
 If OSPF neighbors are empty, verify there is a routed data-plane link between CSR routers. The playbook configures Loopback0 and OSPF process state, but OSPF adjacency requires connected interfaces in the same area.
+
+## Alert Webhook Receiver (Golang)
+
+To fulfill the Implementation Cases Development requirements, a custom Golang HTTP webhook receiver was created. This receiver listens for Grafana alerts when a router goes down (e.g., SNMP targets become unreachable) and logs the alerts to the console.
+
+### Running the Webhook Receiver
+
+The receiver is located in `cmd/alert-receiver/main.go`. To run it locally:
+
+```bash
+cd ~/zodiac
+go run cmd/alert-receiver/main.go
+```
+
+The server will start on port `8080` (or `PORT` environment variable).
+
+### Testing the Webhook
+
+You can simulate a Grafana alert by sending a POST request to the receiver:
+
+```bash
+curl -X POST http://localhost:8080/webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiver": "golang-webhook",
+    "status": "firing",
+    "alerts": [
+      {
+        "status": "firing",
+        "labels": {
+          "alertname": "RouterDown",
+          "instance": "192.168.10.10"
+        },
+        "annotations": {
+          "summary": "Router 192.168.10.10 is DOWN"
+        }
+      }
+    ]
+  }'
+```
+
+Grafana is configured with a Contact Point pointing to `http://<srv-binus-ip>:8080/webhook` to automatically forward alerts to this Golang application.
